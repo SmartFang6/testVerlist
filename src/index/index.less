@@ -1,0 +1,57 @@
+.index {
+  position: relative;
+  font-size: 15px;
+  background: #f8f8f8;
+  color: #333333;
+  box-sizing: border-box;
+
+  .hearBar {
+    display: flex;
+    align-items: center;
+    height: var(--height);
+    background: #18e4e4;
+    color: #fff;
+  }
+
+  .content_box {
+    height: 100vh;
+    // padding-top: var(--height);
+    box-sizing: border-box;
+    overflow: hidden;
+    overflow-y: auto;
+  }
+
+  .head_signIn {
+    color: #fff;
+    display: flex;
+    align-items: center;
+
+    .index_search_box {
+      display: flex;
+      align-items: center;
+
+      text {
+        font-size: 17px;
+        color: #fff;
+        margin-right: 3px;
+        font-weight: 500;
+      }
+
+      .index_search_text {
+        font-size: 13px;
+      }
+    }
+  }
+
+  .content_box_h {
+    height: calc(100vh - var(--height));
+    box-sizing: border-box;
+    margin-top: var(--height);
+  }
+
+}
+
+
+.line-top {
+  border-top: 2px solid #f4f5fa;
+}
