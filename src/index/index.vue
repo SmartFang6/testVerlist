@@ -10,23 +10,10 @@
       <span>{{ navbarTitle }}</span>
     </div>
 
-    <!-- 
-    @ScrollToLower="reachBottom"
-    @Scroll="onPageScroll" -->
     <div ref="containerRef" class="content_box" @scroll="onPageScroll">
-      <div
-        class="index-real-time"
-        id="listId"
-        ref="listRefs"
-        :style="contentStyle"
-      >
-        <div
-          v-for="(item, index) in visibData"
-          :key="item.id + '_' + index"
-          class="list_item"
-          :id="item.index"
-          :data-index="item.index"
-        >
+      <div class="index-real-time" id="listId" ref="listRefs" :style="contentStyle">
+        <div v-for="(item, index) in visibData" :key="item.id + '_' + index" class="list_item" :id="item.index"
+          :data-index="item.index">
           <PostsItem v-if="item.type == 1" class="posts_item" :item="item" />
         </div>
       </div>
@@ -63,7 +50,7 @@ watch(
 );
 const listRefs = ref(null);
 watch(
-  [() => homePagesList.value, () => listRefs.value],
+  [() => homePagesList.value.length, () => listRefs.value],
   () => {
     homePagesList.value.length && initPosition();
     nextTick(() => {
@@ -92,7 +79,7 @@ const contentStyle = computed(() => {
 const endIndex = computed(() => {
   return Math.min(
     homePagesList.value.length,
-    scrollObject.startIndex + scrollObject.maxCounts
+    scrollObject.startIndex + scrollObject.maxCounts + 1
   );
 });
 // 虚拟列表 展示的 list
@@ -108,10 +95,12 @@ onMounted(() => {
 const reachBottom = () => {
   if (isFinished.value || isLoading.value) return;
   getHomePosts();
+  console.log("下拉触底回调");
 };
 const onPageScroll = (e) => {
   const { scrollTop, scrollHeight, clientHeight } = e.target;
-  const bottom = scrollHeight - clientHeight - scrollTop <= 100;
+  const bottom = scrollHeight - clientHeight - scrollTop == 0;
+  // console.log("🚀 ~ file: index.vue:103 ~ onPageScroll ~ bottom:", bottom)
   scrollObject.startIndex = binarySearch(positions.value, scrollTop);
   if (bottom) {
     // console.log("🚀 ~ file: index.vue:113 ~ onPageScroll ~ bottom:", bottom);
@@ -146,8 +135,10 @@ const setPosition = () => {
   nextTick(() => {
     try {
       const nodes = listRefs.value?.children;
-      if (!nodes || !nodes.length) return;
+      // console.log("🚀 ~ file: index.vue:152 ~ nodes.forEach ~ nodes:", nodes)
+      if (nodes.length === 0) return;
       [...nodes].forEach((node) => {
+        if (!node) return;
         let index = Number(node.dataset.index);
         let rect = node.getBoundingClientRect();
         const height = rect.height;
@@ -162,23 +153,22 @@ const setPosition = () => {
         positions.value[index] = item;
       });
       // 从第一条开始算 更新对的每一项的 top，bottom 值。因为需要依赖算对的 height 和 差值累加计算 所以需要另外循环
-      const startIndexId = Number("0");
+      const startIndexId = +nodes[0].id;
+      console.log("🚀 ~ file: index.vue:155 ~ nextTick ~ startIndexId:", startIndexId)
       const len = positions.value.length;
       // 初始的差值，需要累加
       let startDHeight = positions.value[startIndexId].dHeight;
       positions.value[startIndexId].dHeight = 0;
-      for (let i = startIndexId + 1; i < len; i++) {
-        const item = positions.value[i];
-        const preItem = positions.value[i - 1];
-        item.top = preItem.bottom;
+      for (let i = startIndexId + 1; i < len; ++i) {
+        // const item = positions.value[i];
+        positions.value[i].top = positions.value[i - 1].bottom;
         // 之前的 bottom - 累加的差值 --得正 即为正确的 bottom
-        item.bottom = item.bottom - startDHeight;
+        positions.value[i].bottom = positions.value[i].bottom - startDHeight;
         // 差值累加
-        if (item.dHeight !== 0) {
-          startDHeight += item.dHeight;
-          item.dHeight = 0;
+        if (positions.value[i].dHeight !== 0) {
+          startDHeight += positions.value[i].dHeight;
+          positions.value[i].dHeight = 0;
         }
-        positions.value[i] = item;
       }
       scrollObject.listHight = positions.value[len - 1].bottom;
       // console.log(positions.value, "positions");
@@ -187,6 +177,52 @@ const setPosition = () => {
     }
   });
 };
+// const setPosition = () => {
+//   nextTick(() => {
+//     try {
+//       const nodes = listRefs.value?.children;
+//       console.log("🚀 ~ file: index.vue:136 ~ nextTick ~ listRefs.value:", listRefs.value.childNodes);
+//       if (!nodes || nodes.length === 0) return;
+//       [...nodes].forEach((node) => {
+//         let index = Number(node.dataset.index);
+//         let rect = node.getBoundingClientRect();
+//         const height = rect.height;
+//         const item = positions.value[index];
+//         const dHeight = item.height - height;
+//         if (dHeight) {
+//           item.height = height;
+//           //  此时 bottom 的值还只是基于预估高度计算的 只是修改了差值，但是height和 top 变了之后还是不对的
+//           item.bottom = item.bottom - dHeight;
+//           item.dHeight = dHeight;
+//         }
+//         positions.value[index] = item;
+//       });
+//       // 从第一条开始算 更新对的每一项的 top，bottom 值。因为需要依赖算对的 height 和 差值累加计算 所以需要另外循环
+//       const startIndexId = Number("0");
+//       const len = positions.value.length;
+//       // 初始的差值，需要累加
+//       let startDHeight = positions.value[startIndexId].dHeight;
+//       positions.value[startIndexId].dHeight = 0;
+//       for (let i = startIndexId + 1; i < len; i++) {
+//         const item = positions.value[i];
+//         const preItem = positions.value[i - 1];
+//         item.top = preItem.bottom;
+//         // 之前的 bottom - 累加的差值 --得正 即为正确的 bottom
+//         item.bottom = item.bottom - startDHeight;
+//         // 差值累加
+//         if (item.dHeight !== 0) {
+//           startDHeight += item.dHeight;
+//           item.dHeight = 0;
+//         }
+//         positions.value[i] = item;
+//       }
+//       scrollObject.listHight = positions.value[len - 1].bottom;
+//       // console.log(positions.value, "positions");
+//     } catch (error) {
+//       console.log(error);
+//     }
+//   });
+// };
 // 二分法 计算 startIndex
 const binarySearch = (list, value) => {
   let left = 0;
@@ -209,7 +245,6 @@ const binarySearch = (list, value) => {
 //获取帖子列表信息
 const getHomePosts = async (type = "") => {
   if (isFinished.value || isLoading.value) return;
-  console.log("下拉触底回调");
   let posts;
   if (type == "one") {
     homePagesList.value = [];
